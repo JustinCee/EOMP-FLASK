@@ -2,10 +2,8 @@ from flask import Flask, request
 import hmac
 import sqlite3
 
-from flask_jwt import JWT, jwt_required, current_identity
+from flask_jwt import *
 from flask_cors import CORS
-
-app = Flask(__name__)
 
 
 class User(object):
@@ -15,31 +13,13 @@ class User(object):
         self.password = password
 
 
-def fetch_users():
-    with sqlite3.connect('sales.db') as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM users")
-        users = cursor.fetchall()
-
-        new_data = []
-
-        for data in users:
-            new_data.append(User(data[0], data[3], data[4]))
-    return new_data
-
-
-def init_user_table():
-    conn = sqlite3.connect('sales.db')
-    print("Opened database successfully")
-
-    conn.execute("CREATE TABLE IF NOT EXISTS users(user_id INTEGER PRIMARY KEY AUTOINCREMENT,"
-                 "first_name TEXT NOT NULL,"
-                 "last_name TEXT NOT NULL,"
-                 "username TEXT NOT NULL,"
-                 "cell_number TEXT NOT NULL,"
-                 "password TEXT NOT NULL)")
-    print("user table created successfully")
-    conn.close()
+class Product(object):
+    def __init__(self, title, category, quantity, total, cost):
+        self.title = title
+        self.category = category
+        self.quantity = quantity
+        self.total = total
+        self.cost = cost
 
 
 def init_item_table():
@@ -53,12 +33,59 @@ def init_item_table():
     print("item table created successfully.")
 
 
-init_user_table()
 init_item_table()
-users = fetch_users()
 
-username_table = {u.username: u for u in users}
-userid_table = {u.id: u for u in users}
+
+# def fetch_items():
+#     with sqlite3.connect('sales.db') as conn:
+#         cursor = conn.cursor()
+#         cursor.execute("SELECT * from items")
+#         products = cursor.fetchall()
+#
+#         new_data = []
+#
+#         for data in items:
+#             new_data.append(Product(data[0], data[1], data[2], data[3], data[4]))
+#         return new_data
+#
+#
+# products = fetch_items()
+
+
+def init_user_table():
+    conn = sqlite3.connect('sales.db')
+    print("Opened database successfully")
+
+    conn.execute("CREATE TABLE IF NOT EXISTS users (user_id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                 "first_name TEXT NOT NULL,"
+                 "last_name TEXT NOT NULL,"
+                 "cell_number TEXT NOT NULL,"
+                 "username TEXT NOT NULL,"
+                 "password TEXT NOT NULL)")
+    print("user table created successfully")
+    conn.close()
+
+
+init_user_table()
+
+
+def fetch_users():
+    with sqlite3.connect('sales.db') as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM users")
+        the_users = cursor.fetchall()
+
+        new_data = []
+
+        for data in the_users:
+            new_data.append(User(data[0], data[4], data[5]))
+    return new_data
+
+
+our_users = fetch_users()
+
+username_table = {u.username: u for u in our_users}
+userid_table = {u.id: u for u in our_users}
 
 
 def authenticate(username, password):
@@ -75,7 +102,7 @@ def identity(payload):
 app = Flask(__name__)
 app.debug = True
 app.config['SECRET_KEY'] = 'this-should-be-a-secret'
-CORS(app)
+# CORS(app)
 
 jwt = JWT(app, authenticate, identity)
 
@@ -93,8 +120,8 @@ def user_registration():
     if request.method == "POST":
         first_name = request.form['first_name']
         last_name = request.form['last_name']
-        username = request.form['username']
         cell = request.form['cell_number']
+        username = request.form['username']
         password = request.form['password']
 
         with sqlite3.connect("sales.db") as conn:
@@ -102,9 +129,9 @@ def user_registration():
             cursor.execute("INSERT INTO users("
                            "first_name,"
                            "last_name,"
-                           "username,"
                            "cell_number,"
-                           "password) VALUES(?, ?, ?, ?, ?)", (first_name, last_name, username, cell, password))
+                           "username,"
+                           "password) VALUES(?, ?, ?, ?, ?)", (first_name, last_name, cell, username, password))
             conn.commit()
             response["message"] = "success"
             response["status_code"] = 200
